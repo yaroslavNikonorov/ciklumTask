@@ -3,6 +3,7 @@ package server;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -55,27 +56,27 @@ public class RequestHandler implements Runnable {
                         logOutRequest();
                         break;
                     case "SetAttributeValue":
-                        if (checkLogedIn(command.getName())) {
+                        if (checkLogedIn()) {
                             setAttributeValue();
                         }
                         break;
                     case "GetAttributeValue":
-                        if (checkLogedIn(command.getName())) {
+                        if (checkLogedIn()) {
                             getAttributeValue();
                         }
                         break;
                     case "Bidir":
-                        if (checkLogedIn(command.getName())) {
+                        if (checkLogedIn()) {
                             biDirCommand();
                         }
                         break;
                     case "Unidir":
-                        if (checkLogedIn(command.getName())) {
+                        if (checkLogedIn()) {
                             uniDirCommand();
                         }
                         break;
                     case "Discovery":
-                        if (checkLogedIn(command.getName())) {
+                        if (checkLogedIn()) {
                             discoveryCommand();
                         }
                         break;
@@ -85,7 +86,7 @@ public class RequestHandler implements Runnable {
             } else {
                 response = "<CommandResponse CommandName=\"\" Success=\"0\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
             }
-            out.println(response);
+//            out.println(response);
             out.flush();
             socket.close();
 
@@ -96,6 +97,8 @@ public class RequestHandler implements Runnable {
         } catch (SAXException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (TransformerException e) {
             e.printStackTrace();
         }
     }
@@ -115,10 +118,10 @@ public class RequestHandler implements Runnable {
     }
 
 
-    private void loginRequest() throws IOException, InterruptedException {
-        System.out.println(sessionList);
+    private void loginRequest() throws IOException, InterruptedException, TransformerException, ParserConfigurationException {
+//        System.out.println(sessionList);
         if (sessionList.contains(new Session(socket.getInetAddress().getHostAddress()))) {
-            response = "<CommandResponse CommandName=\"Login\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "", "", out);
             return;
         } else {
             String username = command.getParameters().get("User");
@@ -127,26 +130,26 @@ public class RequestHandler implements Runnable {
             if (accounts.get(username) != null && accounts.get(username).equals(password)) {
                 if (Utils.hostReachable(host)) {
                     sessionList.add(new Session(socket.getInetAddress().getHostAddress()));
-                    response = "<CommandResponse CommandName=\"Login\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+                    Utils.createResponse(command.getName(), "1", "", "", out);
                     return;
                 }
             }
-            response = "<CommandResponse CommandName=\"Login\" Success=\"0\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "0", "", "", out);
         }
     }
 
-    private void logOutRequest() {
+    private void logOutRequest() throws TransformerException, ParserConfigurationException {
         Session session = new Session(socket.getInetAddress().getHostAddress());
         if (sessionList.contains(session)) {
             sessionList.remove(session);
-            response = "<CommandResponse CommandName=\"Logout\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "", "", out);
         } else {
-            response = "<CommandResponse CommandName=\"Logout\" Success=\"0\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "0", "", "", out);
         }
     }
 
 
-    private void setAttributeValue() {
+    private void setAttributeValue() throws TransformerException, ParserConfigurationException {
         int sessionIndex = sessionList.indexOf(new Session(socket.getInetAddress().getHostAddress()));
         Session session = sessionList.get(sessionIndex);
         String port = command.getParameters().get("Port");
@@ -158,10 +161,10 @@ public class RequestHandler implements Runnable {
             session.getAttributes().put(port, attributes);
         }
         attributes.put(command.getParameters().get("Attribute"), command.getParameters().get("Value"));
-        response = "<CommandResponse CommandName=\"SetAttributeValue\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+        Utils.createResponse(command.getName(), "1", "", "", out);
     }
 
-    private void getAttributeValue() {
+    private void getAttributeValue() throws TransformerException, ParserConfigurationException {
         int sessionIndex = sessionList.indexOf(new Session(socket.getInetAddress().getHostAddress()));
         Session session = sessionList.get(sessionIndex);
         String port = command.getParameters().get("Port");
@@ -172,74 +175,73 @@ public class RequestHandler implements Runnable {
             attributes = session.getAttributes().get(port);
             if (attributes != null) {
                 if (attributes.containsKey(key)) {
-                    response = "<CommandResponse CommandName=\"GetAttributeValue\" Success=\"1\"><ErrorCode/><Log/><Value>" +
-                            attributes.get(key) + "</Value></CommandResponse>";
+                    Utils.createResponse(command.getName(), "1", "", attributes.get(key), out);
                     return;
                 }
             }
         }
-        response = "<CommandResponse CommandName=\"GetAttributeValue\" Success=\"0\"><ErrorCode/><Log/><Value></Value></CommandResponse>";
+        Utils.createResponse(command.getName(), "0", "", "", out);
     }
 
-    private void biDirCommand() {
+    private void biDirCommand() throws TransformerException, ParserConfigurationException {
         Port portA = new Port(command.getParameters().get("Port_A"));
         Port portB = new Port(command.getParameters().get("Port_B"));
         if (biDirConnections.containsKey(portA)) {
             BiDirConnection biDirConnection = biDirConnections.get(portA);
             if (biDirConnection.getPortA().equals(portB) || biDirConnection.getPortB().equals(portB)) {
-                response = "<CommandResponse CommandName=\"Bidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION EXISTS</ResponseInfo></CommandResponse>";
+                Utils.createResponse(command.getName(), "1", "CONNECTION EXISTS", "", out);
             } else {
-                response = "<CommandResponse CommandName=\"Bidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION USED</ResponseInfo></CommandResponse>";
+                Utils.createResponse(command.getName(), "1", "CONNECTION USED", "", out);
             }
         } else if (biDirConnections.containsKey(portB)) {
-            response = "<CommandResponse CommandName=\"Bidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION USED</ResponseInfo></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "CONNECTION USED", "", out);
         } else {
             BiDirConnection biDirConnection = new BiDirConnection(portA, portB);
             biDirConnections.put(portA, biDirConnection);
             biDirConnections.put(portB, biDirConnection);
-            response = "<CommandResponse CommandName=\"Bidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION CREATED</ResponseInfo></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "CONNECTION CREATED", "", out);
         }
     }
 
-    private void uniDirCommand() {
+    private void uniDirCommand() throws TransformerException, ParserConfigurationException {
         Port srcPort = new Port(command.getParameters().get("SrcPort"));
         Port dstPort = new Port(command.getParameters().get("DstPort"));
         if (uniDirConnections.containsKey(dstPort) && uniDirConnections.get(dstPort).getDstPort().equals(dstPort)) {
             if (uniDirConnections.get(dstPort).getSrcPort().equals(srcPort)) {
-                response = "<CommandResponse CommandName=\"unidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION EXISTS</ResponseInfo></CommandResponse>";
+                Utils.createResponse(command.getName(), "1", "CONNECTION EXISTS", "", out);
             } else {
-                response = "<CommandResponse CommandName=\"unidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>DstPORT is USED - Not creating an additional connection</ResponseInfo></CommandResponse>";
+                Utils.createResponse(command.getName(), "1", "DstPORT is USED - Not creating an additional connection", "", out);
             }
         } else if (uniDirConnections.containsKey(srcPort) && uniDirConnections.get(srcPort).getSrcPort().equals(srcPort)) {
             UniDirConnection uniDirConnection = new UniDirConnection(srcPort, dstPort);
             uniDirConnections.put(srcPort, uniDirConnection);
             uniDirConnections.put(dstPort, uniDirConnection);
-            response = "<CommandResponse CommandName=\"unidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>SrcPORT is USED - Creating additional connection</ResponseInfo></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "SrcPORT is USED - Creating additional connection", "", out);
         } else {
             UniDirConnection uniDirConnection = new UniDirConnection(srcPort, dstPort);
             uniDirConnections.put(srcPort, uniDirConnection);
             uniDirConnections.put(dstPort, uniDirConnection);
-            response = "<CommandResponse CommandName=\"unidir\" Success=\"1\"><ErrorCode/><Log/><ResponseInfo>CONNECTION CREATED</ResponseInfo></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "CONNECTION CREATED", "", out);
         }
     }
 
-    private void discoveryCommand() {
+    private void discoveryCommand() throws TransformerException, ParserConfigurationException {
         Port port = new Port(command.getParameters().get("Address"));
         if (uniDirConnections.containsKey(port)) {
-            response = "<CommandResponse CommandName=\"Discovesry\" Success=\"1\"><ErrorCode/><Log/><ResourceInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "", "", out);
         } else if (biDirConnections.containsKey(port)) {
-            response = "<CommandResponse CommandName=\"Discovesry\" Success=\"1\"><ErrorCode/><Log/><ResourceInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "1", "", "", out);
         } else {
-            response = "<CommandResponse CommandName=\"Discovesry\" Success=\"0\"><ErrorCode/><Log/><ResourceInfo/></CommandResponse>";
+            Utils.createResponse(command.getName(), "0", "", "", out);
         }
     }
 
-    private boolean checkLogedIn(String command) throws IOException {
+    private boolean checkLogedIn() throws IOException, TransformerException, ParserConfigurationException {
         if (sessionList.contains(new Session(socket.getInetAddress().getHostAddress()))) {
             sessionList.get(sessionList.indexOf(new Session(socket.getInetAddress().getHostAddress()))).setLastConnected(new Date());
             return true;
         }
-        response = "<CommandResponse CommandName=\"" + command + "\" Success=\"0\"><ErrorCode/><Log/><ResponseInfo/></CommandResponse>";
+        Utils.createResponse(command.getName(), "0", "", "", out);
         return false;
     }
 }

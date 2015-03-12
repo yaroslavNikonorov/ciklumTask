@@ -7,8 +7,10 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
-import java.io.StringReader;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.*;
 import java.net.InetAddress;
 
 /**
@@ -52,4 +54,37 @@ public class Utils {
         }
     }
 
+    public static void createResponse(String commandName, String success, String response, String value, PrintWriter out) throws ParserConfigurationException, TransformerException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.newDocument();
+
+        Element rootElement = document.createElement("CommandResponse");
+        rootElement.setAttribute("CommandName", commandName);
+        rootElement.setAttribute("Success", success);
+        document.appendChild(rootElement);
+
+        Element errorCode = document.createElement("ErrorCode");
+        rootElement.appendChild(errorCode);
+
+        Element log = document.createElement("Log");
+        rootElement.appendChild(log);
+
+        Element responseInfo = document.createElement("ResponseInfo");
+        rootElement.appendChild(responseInfo);
+        responseInfo.setTextContent(response);
+
+        if(!value.isEmpty()){
+            Element valueElement = document.createElement("Value");
+            rootElement.appendChild(valueElement);
+            valueElement.setTextContent(value);
+        }
+
+        TransformerFactory tFactory =
+                TransformerFactory.newInstance();
+        Transformer transformer = tFactory.newTransformer();
+
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+        transformer.transform(new DOMSource(document), new StreamResult(out));
+    }
 }
