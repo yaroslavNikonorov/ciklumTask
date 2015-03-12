@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Command CommandName="SetAttributeValue"><Parameters><Parameter Name="Port" Value="192.168.42.240/1/2"/><Parameter Name="Attribute" Value="LIN1"/><Parameter Name="Value" Value="Ondasdasicxc"/></Parameters></Command>

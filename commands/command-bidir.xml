@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Command CommandName="Bidir"><Parameters><Parameter Name="Port_A" Value="192.168.42.240/1/1"/><Parameter Name="Port_B" Value="192.168.42.240/1/4"/></Parameters></Command>

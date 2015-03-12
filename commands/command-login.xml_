@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Command CommandName="Login"><Parameters><Parameter Name="Address" Value="10.0.1.5"/><Parameter Name="User" Value="admin"/><Parameter Name="Password" Value="password"/></Parameters></Command>
